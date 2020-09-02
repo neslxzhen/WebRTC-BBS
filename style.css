@@ -1,0 +1,58 @@
+body {
+    font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
+    background-color: white;
+	min-width: 450px;
+}
+
+td {
+    width: 50%;
+    padding: 10px;
+}
+
+input {
+	margin-bottom: 5px;
+}
+
+a:visited{ 
+	color: blue; 
+}
+
+.display{
+    width: 100%;
+}
+
+.peerStatu{
+    height: 125px;
+    vertical-align: text-top;
+    font-weight: bold;
+    margin-bottom: 10px;
+    border-bottom: 2px solid black;
+}
+
+/*
+    msg
+*/
+
+.message {
+    height: 125px;
+    max-height: 125px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid black;
+    overflow: auto;
+}
+
+.msg-time {
+    color: blue;
+}
+
+.cueMsg {
+    color: orange;
+}
+
+.selfMsg {
+    color: green;
+}
+
+.peerMsg {
+    color: red;
+}

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width">
+    <title>Peer-to-Peer Cue System --- Sender</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>Peer-to-Peer Cue System --- Sender</h1>
+    <table class="display">
+        <tr>
+            <td>
+                <h3>Status:</h3>
+            </td>
+            <td>
+                <h3>Messages:</h3>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <span style="font-weight: bold">ID: </span>
+                <input type="text" id="receiver-id" title="Input the ID from receive.html">
+                <button id="connect-button">Connect</button>
+            </td>
+            <td>
+                <input type="text" id="sendMessageBox" placeholder="Enter a message..." autofocus="true" />
+                <button type="button" id="sendButton">Send</button>
+                <button type="button" id="clearMsgsButton">Clear Msgs (Local)</button>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="peerStatu" class="peerStatu"></div>
+                <table id="connectionsTable" class="connectionsTable"></table>
+            </td>
+            <td>
+                <div class="message" id="message"></div>
+            </td>
+        </tr>
+    </table>
+
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.2.0/dist/peerjs.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="format.js"></script>
+    <script type="text/javascript">
+        
+        (function () {
+            'use strict'
+
+            // view
+            var message = document.getElementById("message");
+            var sendMessageBox = document.getElementById("sendMessageBox");
+            var sendButton = document.getElementById("sendButton");
+            var clearMsgsButton = document.getElementById("clearMsgsButton");
+            var connectButton = document.getElementById("connect-button");
+            var cueString = "<span class=\"cueMsg\">Cue: </span>";
+
+            // declare
+            var lastPeerId = null;
+            var peer = null; // own peer object
+            var connections = [];
+            var localId = null;
+
+            // localId="123"; //TODO: get localId from storage
+
+            function initialize() {
+                peer = new Peer(localId, {
+                    debug: 2
+                });
+
+                peer.on('open', function (id) {
+                    // Workaround for peer.reconnect deleting previous id
+                    if (peer.id === null) {
+                        console.log('Received null id from peer open');
+                        peer.id = localId = lastPeerId;
+                    } else {
+                        lastPeerId = localId = peer.id;
+                    }
+                    let msg = "My ID: {0}, local storage: {1}".format(peer.id,localId)
+                    console.log(msg);
+                    $("#peerStatu").append("<span>" + msg + "</span>");
+                });
+
+                // peer.on('connection', function (c) { // connected by others
+                //     if(connections.forEach(conn=>conn.peer===c.peer)) return;
+                //     connections.push(c)
+
+                //     console.log("Connected to: " + conn.peer);
+                //     status.innerHTML = "Connected";
+                // });
+
+                peer.on('disconnected', function () {
+                    let msg = "Connection lost. Please reconnect"
+                    $("#peerStatu").text("<span>" + msg + "</span>");
+                    console.log(msg);
+
+                    // Workaround for peer.reconnect deleting previous id
+                    peer.id = lastPeerId;
+                    peer._lastServerId = lastPeerId;
+                    peer.reconnect();
+                });
+
+                peer.on('close', function () {
+                    connections = null;
+                    let msg = "Connection destroyed. Please refresh"
+                    $("#peerStatu").text("<span>" + msg + "</span>");
+                    console.log(msg);
+                });
+
+                peer.on('error', function (err) {
+                    console.log(err);
+                    alert('' + err);
+                });
+            };
+
+            /**
+             * Create the connection between the two Peers.
+             *
+             * Sets up callbacks that handle any events related to the
+             * connection and data received on it.
+             */
+            function join() {
+                let targets=$("#receiver-id").val().split(',')
+                
+                targets.forEach(target => {
+                    if(connections.forEach(conn=>conn.peer===target)){
+                        console.log(target+" is already")
+                        return;
+                    } 
+
+                    // Create connection to destination peer specified in the input field
+                    let conn = peer.connect(target, {
+                        reliable: true
+                    });
+
+                    
+                    let target_tr=null;
+                    conn.on('open', function () {
+                        let msg="Connected to: " + conn.peer
+                        updateTable(conn.peer,msg)
+                        console.log(msg);
+                    });
+                    conn.on('data', function (data) {
+                        addMessage("<span class='peerMsg'>{0}:</span>{1} ".format(conn.peer,data));
+                    });
+                    conn.on('close', function () {
+                        let msg="Connection closed"
+                        updateTable(conn.peer,msg)
+                        console.log(msg+": "+conn.peer);
+                    });
+
+                    connections.push(conn);
+                });
+            };
+
+            function updateTable(id,statu){
+                if(!$("#connectionsTable").children('tr#'+id).length){
+                    $("#connectionsTable").append("<tr id={0}></tr>".format(id));
+                    let target_tr=  $("#connectionsTable tr#{0}".format(id))
+                    target_tr.append("<td>"+ id+"</td>")
+                    target_tr.append("<td class='statu'>"+ statu+"</td>")
+                }else{
+                    $("#connectionsTable tr#{0}".format(id)).children('td.statu').text(statu)
+                }
+            }
+
+            function addMessage(msg) {
+                var now = new Date();
+                var h = now.getHours();
+                var m = addZero(now.getMinutes());
+                var s = addZero(now.getSeconds());
+
+                if (h > 12)
+                    h -= 12;
+                else if (h === 0)
+                    h = 12;
+
+                function addZero(t) {
+                    if (t < 10)
+                        t = "0" + t;
+                    return t;
+                };
+
+                message.innerHTML = "<br><span class=\"msg-time\">" + h + ":" + m + ":" + s + "</span>  -  " + msg + message.innerHTML;
+            };
+
+            function clearMessages() {
+                message.innerHTML = "";
+                addMessage("Msgs cleared");
+            };
+
+            // Listen for enter in message box
+            sendMessageBox.addEventListener('keypress', function (e) {
+                var event = e || window.event;
+                var char = event.which || event.keyCode;
+                if (char == '13')
+                    sendButton.click();
+            });
+
+            sendButton.addEventListener('click', function () {
+                let msg = sendMessageBox.value;
+                connections.forEach(conn => {
+                    if (conn && conn.open) {
+                        conn.send(msg);
+                        console.log("Sent to {0}: {1}".format(conn.peer,msg));
+                    } else {
+                        console.log('Connection is closed: '+conn.peer);
+                    }
+                })
+                addMessage("<span class=\"selfMsg\">Self: </span> " + msg);
+                sendMessageBox.value = "";
+            });
+
+            clearMsgsButton.addEventListener('click', clearMessages);
+            connectButton.addEventListener('click', join);
+
+            initialize();
+        })();
+    </script>
+</body>
+
+</html>
