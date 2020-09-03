@@ -50,21 +50,17 @@
         (function () {
             'use strict'
 
-            // view
-            var message = document.getElementById("message");
-            var sendMessageBox = document.getElementById("sendMessageBox");
-            var sendButton = document.getElementById("sendButton");
-            var clearMsgsButton = document.getElementById("clearMsgsButton");
-            var connectButton = document.getElementById("connect-button");
-            var cueString = "<span class=\"cueMsg\">Cue: </span>";
-
             // declare
             var lastPeerId = null;
-            var peer = null; // own peer object
+            var peer = null;
             var connections = [];
             var localId = null;
 
             // localId="123"; //TODO: get localId from storage
+
+             /*
+                peer initialize
+            */
 
             function initialize() {
                 peer = new Peer(localId, {
@@ -84,13 +80,9 @@
                     $("#peerStatu").append("<span>" + msg + "</span>");
                 });
 
-                // peer.on('connection', function (c) { // connected by others
-                //     if(connections.forEach(conn=>conn.peer===c.peer)) return;
-                //     connections.push(c)
-
-                //     console.log("Connected to: " + conn.peer);
-                //     status.innerHTML = "Connected";
-                // });
+                peer.on('connection', function (c) { // connected by others
+                    addConnection(c)
+                });
 
                 peer.on('disconnected', function () {
                     let msg = "Connection lost. Please reconnect"
@@ -116,12 +108,10 @@
                 });
             };
 
-            /**
-             * Create the connection between the two Peers.
-             *
-             * Sets up callbacks that handle any events related to the
-             * connection and data received on it.
-             */
+            /*
+                connections action
+            */
+
             function join() {
                 let targets=$("#receiver-id").val().split(',')
                 
@@ -131,13 +121,14 @@
                         return;
                     } 
 
-                    // Create connection to destination peer specified in the input field
-                    let conn = peer.connect(target, {
-                        reliable: true
-                    });
+                    addConnection(peer.connect(target, {
+                        reliable: true  // Create connection to destination peer specified in the input field
+                    }))
+                });
+            };
 
-                    
-                    let target_tr=null;
+            function addConnection(conn){
+                let target_tr=null;
                     conn.on('open', function () {
                         let msg="Connected to: " + conn.peer
                         updateTable(conn.peer,msg)
@@ -153,8 +144,11 @@
                     });
 
                     connections.push(conn);
-                });
-            };
+            }
+
+            /*
+                connections table view
+            */
 
             function updateTable(id,statu){
                 if(!$("#connectionsTable").children('tr#'+id).length){
@@ -166,6 +160,10 @@
                     $("#connectionsTable tr#{0}".format(id)).children('td.statu').text(statu)
                 }
             }
+
+            /*
+                msg view
+            */
 
             function addMessage(msg) {
                 var now = new Date();
@@ -183,25 +181,24 @@
                         t = "0" + t;
                     return t;
                 };
-
-                message.innerHTML = "<br><span class=\"msg-time\">" + h + ":" + m + ":" + s + "</span>  -  " + msg + message.innerHTML;
+                $('#message').prepend("<br><span class='msg-time'>" + h + ":" + m + ":" + s + "</span>  -  "+msg);
             };
 
             function clearMessages() {
-                message.innerHTML = "";
+                $('#message').text("");
                 addMessage("Msgs cleared");
             };
 
             // Listen for enter in message box
-            sendMessageBox.addEventListener('keypress', function (e) {
+            $('#sendMessageBox').keypress(function (e) {
                 var event = e || window.event;
                 var char = event.which || event.keyCode;
                 if (char == '13')
                     sendButton.click();
             });
-
-            sendButton.addEventListener('click', function () {
-                let msg = sendMessageBox.value;
+            
+            $('#sendButton').click(function () {
+                let msg =  $('#sendMessageBox').val();
                 connections.forEach(conn => {
                     if (conn && conn.open) {
                         conn.send(msg);
@@ -211,12 +208,10 @@
                     }
                 })
                 addMessage("<span class=\"selfMsg\">Self: </span> " + msg);
-                sendMessageBox.value = "";
+                $('#sendMessageBox').val("");
             });
-
-            clearMsgsButton.addEventListener('click', clearMessages);
-            connectButton.addEventListener('click', join);
-
+            $('#clearMsgsButton').click(clearMessages)
+            $('#connect-button').click(join)
             initialize();
         })();
     </script>
