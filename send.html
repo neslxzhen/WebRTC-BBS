@@ -67,6 +67,7 @@
                 });
 
                 peer.on('open', function (id) {
+                    console.log('open');
                     // Workaround for peer.reconnect deleting previous id
                     if (peer.id === null) {
                         console.log('Received null id from peer open');
@@ -79,11 +80,8 @@
                 });
 
                 peer.on('connection', function (c) { // connected by others
-                    // FIXME: 啟用時，會解決issue#1，但非直系之間雖然連線但無法通訊
-                    if(connections.filter(conn=>conn.peer === c.peer).length==0){
-                        addConnection(c)
-                    }
-                    // addConnection(c)
+                    console.log('connectioned: '+c.peer);
+                    addConnection(c)
                 });
 
                 peer.on('disconnected', function () {
@@ -106,7 +104,7 @@
 
                 peer.on('error', function (err) {
                     console.log(err);
-                    alert('' + err);
+                    // alert('' + err);
                 });
             };
 
@@ -125,9 +123,8 @@
             function addConnection(conn) {
                 let target_tr = null;
                 conn.on('open', function () {
-                    let msg = "Connected to: " + conn.peer
-                    updateTable(conn.peer, msg)
-                    console.log(msg);
+                    updateTable(conn.peer, 'Connected')
+                    console.log("Connected to: "+ conn.peer);
                 });
                 conn.on('data', function (data) {
                     addMessage("<span class='peerMsg'>{0}:</span>{1} ".format(conn.peer, data.msg));
@@ -140,7 +137,13 @@
                     console.log(msg + ": " + conn.peer);
                 });
 
-                connections.push(conn);
+                let i=connections.findIndex(conn2=>conn2.peer===conn.peer);
+                if(i!==-1){
+                    connections[i]=conn
+                }else{
+                    connections.push(conn);
+                }
+                
                 console.log(connections)
             }
 
