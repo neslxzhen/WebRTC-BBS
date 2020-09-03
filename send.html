@@ -46,10 +46,9 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="format.js"></script>
     <script type="text/javascript">
-        
         (function () {
             'use strict'
-
+            
             // declare
             var lastPeerId = null;
             var peer = null;
@@ -76,12 +75,15 @@
                         lastPeerId = localId = peer.id;
                     }
                     let msg = "My ID: {0}, local storage: {1}".format(peer.id,localId)
-                    console.log(msg);
                     $("#peerStatu").append("<span>" + msg + "</span>");
                 });
 
                 peer.on('connection', function (c) { // connected by others
-                    addConnection(c)
+                    // FIXME: 啟用時，會解決issue#1，但非直系之間雖然連線但無法通訊
+                    if(connections.filter(conn=>conn.peer === c.peer).length==0){
+                        addConnection(c)
+                    }
+                    // addConnection(c)
                 });
 
                 peer.on('disconnected', function () {
@@ -112,38 +114,34 @@
                 connections action
             */
 
-            function join() {
-                let targets=$("#receiver-id").val().split(',')
-                
-                targets.forEach(target => {
-                    if(connections.forEach(conn=>conn.peer===target)){
-                        console.log(target+" is already")
-                        return;
-                    } 
+            function join2(target) {
+                if (target === localId || connections.filter(conn=>conn.peer === target).length>0) return;
 
-                    addConnection(peer.connect(target, {
-                        reliable: true  // Create connection to destination peer specified in the input field
-                    }))
-                });
+                addConnection(peer.connect(target, {
+                    reliable: true  // Create connection to destination peer specified in the input field
+                }))
             };
 
-            function addConnection(conn){
-                let target_tr=null;
-                    conn.on('open', function () {
-                        let msg="Connected to: " + conn.peer
-                        updateTable(conn.peer,msg)
-                        console.log(msg);
-                    });
-                    conn.on('data', function (data) {
-                        addMessage("<span class='peerMsg'>{0}:</span>{1} ".format(conn.peer,data));
-                    });
-                    conn.on('close', function () {
-                        let msg="Connection closed"
-                        updateTable(conn.peer,msg)
-                        console.log(msg+": "+conn.peer);
-                    });
+            function addConnection(conn) {
+                let target_tr = null;
+                conn.on('open', function () {
+                    let msg = "Connected to: " + conn.peer
+                    updateTable(conn.peer, msg)
+                    console.log(msg);
+                });
+                conn.on('data', function (data) {
+                    addMessage("<span class='peerMsg'>{0}:</span>{1} ".format(conn.peer, data.msg));
+                    console.log("Get msg: " + data.msg);
+                    new Set(data.ids).forEach(id => join2(id));
+                });
+                conn.on('close', function () {
+                    let msg = "Connection closed"
+                    updateTable(conn.peer, msg)
+                    console.log(msg + ": " + conn.peer);
+                });
 
-                    connections.push(conn);
+                connections.push(conn);
+                console.log(connections)
             }
 
             /*
@@ -189,6 +187,12 @@
                 addMessage("Msgs cleared");
             };
 
+            function join() {
+                let targets = $("#receiver-id").val().split(',')
+                targets.forEach(target => {
+                    join2(target)
+                });
+            };
             // Listen for enter in message box
             $('#sendMessageBox').keypress(function (e) {
                 var event = e || window.event;
@@ -201,10 +205,16 @@
                 let msg =  $('#sendMessageBox').val();
                 connections.forEach(conn => {
                     if (conn && conn.open) {
-                        conn.send(msg);
+                        conn.send({
+                            msg:msg,
+                            from:localId,
+                            ids:Object.values(connections).map(conn => conn.peer)
+                        });
                         console.log("Sent to {0}: {1}".format(conn.peer,msg));
                     } else {
-                        console.log('Connection is closed: '+conn.peer);
+                        let msg = "Connection closed"
+                        updateTable(conn.peer, msg)
+                        console.log(msg + ": " + conn.peer);
                     }
                 })
                 addMessage("<span class=\"selfMsg\">Self: </span> " + msg);
