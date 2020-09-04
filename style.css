@@ -1,7 +1,13 @@
 body {
     font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
     background-color: white;
-	min-width: 450px;
+    min-width: 450px;
+    padding-left:30px;
+}
+
+span.title{
+    font-weight: bold;
+    font-size: 20px;
 }
 
 td {
@@ -22,11 +28,13 @@ a:visited{
 }
 
 .peerStatu{
-    height: 125px;
+    height: 40px;
     vertical-align: text-top;
-    font-weight: bold;
     margin-bottom: 10px;
-    border-bottom: 2px solid black;
+}
+
+.connectionsTable{
+    border-top: 2px solid black;
 }
 
 /*
