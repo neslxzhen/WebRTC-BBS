@@ -25,6 +25,7 @@
                 <span>ID: </span>
                 <input type="text" id="receiver-id" placeholder="input the id of other sender.">
                 <button id="connect-button">Connect</button>
+                <button id="reconnect-button">Reconnect</button>
             </td>
             <td>
                 <input type="text" id="sendMessageBox" placeholder="Enter a message..." autofocus="true" />
@@ -227,6 +228,7 @@
             });
             $('#clearMsgsButton').click(clearMessages)
             $('#connect-button').click(join)
+            $('#reconnect-button').click(()=>peer.reconnect())
             initialize();
         })();
     </script>
